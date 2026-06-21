@@ -2,10 +2,11 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>V11 GOD MMO MAP</title>
+<title>V12 GOD MMO FIXED</title>
+
 <style>
 body{margin:0;background:#0b0b0b;color:white;font-family:Arial}
-canvas{display:block;margin:auto;background:#111}
+canvas{background:#111;display:block;margin:auto}
 #ui{position:fixed;top:10px;left:10px;background:#1c1c1c;padding:10px;border-radius:10px}
 button{margin-top:5px}
 </style>
@@ -23,7 +24,6 @@ button{margin-top:5px}
 
 <script type="module">
 
-// 🔥 FIREBASE MODULE IMPORT
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import {
   getDatabase,
@@ -33,9 +33,7 @@ import {
   onDisconnect
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
-
-// 🔥 CONFIG KAMU (SUDAH DIPAKAI)
+// 🔥 CONFIG FIREBASE (PASTI BENAR)
 const firebaseConfig = {
   apiKey: "AIzaSyDNQTysSwd_VNdJeDD11bTnWR5K973CeWU",
   authDomain: "sultan-mmo-v11.firebaseapp.com",
@@ -46,9 +44,7 @@ const firebaseConfig = {
   measurementId: "G-ERXQH8EE3Q"
 };
 
-// INIT
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
 const db = getDatabase(app);
 
 // GAME
@@ -60,7 +56,9 @@ let players={};
 
 let me={x:400,y:250};
 
-// JOIN GAME
+let lastUpdate = 0;
+
+// 🔥 JOIN WORLD (FIXED NO BLANK)
 window.join = function(){
 myName = document.getElementById("name").value;
 if(!myName) return;
@@ -69,41 +67,47 @@ set(ref(db,"players/"+myName),{
 name:myName,
 x:me.x,
 y:me.y
+}).then(()=>{
+document.getElementById("status").innerText="🟢 ONLINE";
 });
 
-// auto remove saat disconnect
-onDisconnect(ref(db,"players/"+myName)).remove();
-
-document.getElementById("status").innerText="🟢 ONLINE";
-
-// listen world
+// realtime listener (WAJIB 1x saja)
 onValue(ref(db,"players"),(snap)=>{
 players = snap.val() || {};
 });
 };
 
-// MOVE PLAYER
-document.addEventListener("keydown",(e)=>{
-if(e.key=="w")me.y-=10;
-if(e.key=="s")me.y+=10;
-if(e.key=="a")me.x-=10;
-if(e.key=="d")me.x+=10;
+// 🔥 THROTTLED UPDATE (ANTI SPAM FIREBASE)
+function updateServer(){
+if(!myName) return;
 
-if(myName){
+let now = Date.now();
+if(now - lastUpdate < 200) return; // anti spam
+lastUpdate = now;
+
 set(ref(db,"players/"+myName),{
 name:myName,
 x:me.x,
 y:me.y
 });
 }
+
+// 🔥 MOVEMENT
+document.addEventListener("keydown",(e)=>{
+if(e.key=="w")me.y-=10;
+if(e.key=="s")me.y+=10;
+if(e.key=="a")me.x-=10;
+if(e.key=="d")me.x+=10;
+
+updateServer();
 });
 
-// DRAW WORLD
+// 🔥 DRAW WORLD
 function draw(){
 
 ctx.clearRect(0,0,800,500);
 
-// grid
+// GRID
 ctx.strokeStyle="#222";
 for(let i=0;i<800;i+=50){
 ctx.beginPath();
@@ -112,14 +116,19 @@ ctx.lineTo(i,500);
 ctx.stroke();
 }
 
-// players
+// PLAYERS
 for(let id in players){
-let p=players[id];
+let p = players[id];
 
-ctx.fillStyle = (id===myName) ? "gold" : "red";
+if(!p) continue;
+
+ctx.fillStyle = (p.name === myName) ? "gold" : "red";
 ctx.fillRect(p.x,p.y,20,20);
 ctx.fillText(p.name,p.x,p.y-5);
 }
+
+// DEBUG
+console.log("players:", players);
 
 requestAnimationFrame(draw);
 }
