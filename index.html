@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>V11 Firebase MMO Map</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"></script>
+
+<style>
+body{margin:0;background:#0b0b0b;color:white;font-family:Arial}
+canvas{background:#111;display:block;margin:auto}
+#ui{position:fixed;top:10px;left:10px;background:#1c1c1c;padding:10px;border-radius:10px}
+</style>
+</head>
+
+<body>
+
+<div id="ui">
+<div id="status">Connecting...</div>
+<input id="name" placeholder="Nama Player">
+<button onclick="join()">JOIN</button>
+</div>
+
+<canvas id="game" width="800" height="500"></canvas>
+
+<script>
+
+// 🔥 FIREBASE CONFIG (ISI DARI KAMU)
+const firebaseConfig = {
+  apiKey: "ISI",
+  authDomain: "ISI",
+  databaseURL: "ISI",
+  projectId: "ISI",
+  storageBucket: "ISI",
+  messagingSenderId: "ISI",
+  appId: "ISI"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const playersRef = db.ref("players");
+
+// GAME STATE
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+
+let myName="";
+let players={};
+
+let me={
+x:400,
+y:250
+};
+
+// JOIN
+function join(){
+myName=document.getElementById("name").value;
+if(!myName) return;
+
+playersRef.child(myName).set({
+x:me.x,
+y:me.y,
+name:myName
+});
+
+// auto remove on disconnect
+playersRef.child(myName).onDisconnect().remove();
+
+document.getElementById("status").innerText="🟢 Online";
+
+// listen world
+playersRef.on("value",(snap)=>{
+players=snap.val()||{};
+});
+}
+
+// MOVE
+document.addEventListener("keydown",(e)=>{
+if(e.key=="w")me.y-=10;
+if(e.key=="s")me.y+=10;
+if(e.key=="a")me.x-=10;
+if(e.key=="d")me.x+=10;
+
+// update to firebase
+if(myName){
+playersRef.child(myName).set({
+x:me.x,
+y:me.y,
+name:myName
+});
+}
+});
+
+// DRAW WORLD
+function draw(){
+
+ctx.clearRect(0,0,800,500);
+
+// GRID
+ctx.strokeStyle="#222";
+for(let i=0;i<800;i+=50){
+ctx.beginPath();
+ctx.moveTo(i,0);
+ctx.lineTo(i,500);
+ctx.stroke();
+}
+
+// PLAYERS
+for(let id in players){
+let p=players[id];
+ctx.fillStyle = (id==myName) ? "gold" : "red";
+ctx.fillRect(p.x,p.y,20,20);
+ctx.fillText(p.name,p.x,p.y-5);
+}
+
+requestAnimationFrame(draw);
+}
+
+draw();
+
+</script>
+
+</body>
+</html>
