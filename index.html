@@ -2,92 +2,98 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>V11 Firebase MMO Map</title>
-
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"></script>
-
+<title>V11 GOD MMO MAP</title>
 <style>
 body{margin:0;background:#0b0b0b;color:white;font-family:Arial}
-canvas{background:#111;display:block;margin:auto}
+canvas{display:block;margin:auto;background:#111}
 #ui{position:fixed;top:10px;left:10px;background:#1c1c1c;padding:10px;border-radius:10px}
+button{margin-top:5px}
 </style>
 </head>
 
 <body>
 
 <div id="ui">
-<div id="status">Connecting...</div>
 <input id="name" placeholder="Nama Player">
-<button onclick="join()">JOIN</button>
+<button onclick="join()">JOIN WORLD</button>
+<div id="status">OFFLINE</div>
 </div>
 
 <canvas id="game" width="800" height="500"></canvas>
 
-<script>
+<script type="module">
 
-// 🔥 FIREBASE CONFIG (ISI DARI KAMU)
+// 🔥 FIREBASE MODULE IMPORT
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import {
+  getDatabase,
+  ref,
+  set,
+  onValue,
+  onDisconnect
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
+
+// 🔥 CONFIG KAMU (SUDAH DIPAKAI)
 const firebaseConfig = {
-  apiKey: "ISI",
-  authDomain: "ISI",
-  databaseURL: "ISI",
-  projectId: "ISI",
-  storageBucket: "ISI",
-  messagingSenderId: "ISI",
-  appId: "ISI"
+  apiKey: "AIzaSyDNQTysSwd_VNdJeDD11bTnWR5K973CeWU",
+  authDomain: "sultan-mmo-v11.firebaseapp.com",
+  projectId: "sultan-mmo-v11",
+  storageBucket: "sultan-mmo-v11.firebasestorage.app",
+  messagingSenderId: "824969622980",
+  appId: "1:824969622980:web:42cd11cd300bd9a979a091",
+  measurementId: "G-ERXQH8EE3Q"
 };
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-const playersRef = db.ref("players");
+// INIT
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+const db = getDatabase(app);
 
-// GAME STATE
-const canvas=document.getElementById("game");
-const ctx=canvas.getContext("2d");
+// GAME
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
 let myName="";
 let players={};
 
-let me={
-x:400,
-y:250
-};
+let me={x:400,y:250};
 
-// JOIN
-function join(){
-myName=document.getElementById("name").value;
+// JOIN GAME
+window.join = function(){
+myName = document.getElementById("name").value;
 if(!myName) return;
 
-playersRef.child(myName).set({
+set(ref(db,"players/"+myName),{
+name:myName,
 x:me.x,
-y:me.y,
-name:myName
+y:me.y
 });
 
-// auto remove on disconnect
-playersRef.child(myName).onDisconnect().remove();
+// auto remove saat disconnect
+onDisconnect(ref(db,"players/"+myName)).remove();
 
-document.getElementById("status").innerText="🟢 Online";
+document.getElementById("status").innerText="🟢 ONLINE";
 
 // listen world
-playersRef.on("value",(snap)=>{
-players=snap.val()||{};
+onValue(ref(db,"players"),(snap)=>{
+players = snap.val() || {};
 });
-}
+};
 
-// MOVE
+// MOVE PLAYER
 document.addEventListener("keydown",(e)=>{
 if(e.key=="w")me.y-=10;
 if(e.key=="s")me.y+=10;
 if(e.key=="a")me.x-=10;
 if(e.key=="d")me.x+=10;
 
-// update to firebase
 if(myName){
-playersRef.child(myName).set({
+set(ref(db,"players/"+myName),{
+name:myName,
 x:me.x,
-y:me.y,
-name:myName
+y:me.y
 });
 }
 });
@@ -97,7 +103,7 @@ function draw(){
 
 ctx.clearRect(0,0,800,500);
 
-// GRID
+// grid
 ctx.strokeStyle="#222";
 for(let i=0;i<800;i+=50){
 ctx.beginPath();
@@ -106,10 +112,11 @@ ctx.lineTo(i,500);
 ctx.stroke();
 }
 
-// PLAYERS
+// players
 for(let id in players){
 let p=players[id];
-ctx.fillStyle = (id==myName) ? "gold" : "red";
+
+ctx.fillStyle = (id===myName) ? "gold" : "red";
 ctx.fillRect(p.x,p.y,20,20);
 ctx.fillText(p.name,p.x,p.y-5);
 }
